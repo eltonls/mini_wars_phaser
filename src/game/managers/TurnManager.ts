@@ -27,7 +27,7 @@ class TurnManager {
         this.aiManager.startAITurn();
     }
 
-    private startPlayerTurn(): void {
+    public startPlayerTurn(): void {
         this.isPlayerRound = true;
         this.actualRound++;
         this.scene.events.emit("turnChange", { isPlayerTurn: true, round: this.actualRound });

@@ -1,5 +1,6 @@
 import Tile from "../entities/Tile";
 import Unit from "../entities/units/Unit";
+import GameModes from "../entities/utils/GameModes";
 import GameScene from "../scenes/GameScene";
 import EventData from "../types/EventData";
 import UnitTypes from "../types/UnitTypes";
@@ -18,6 +19,8 @@ class UnitManager {
     }
 
     public addUnit(unit: Unit, tile: Tile): void {
+        unit.setCurrentTile(tile);
+        unit.setPosition(tile.x, tile.y);
         tile.setOccupyingUnit(unit);
         this.units.push(unit);
         this.scene.add.existing(unit);
@@ -33,6 +36,15 @@ class UnitManager {
         this.scene.events.on("turnChange", this.turnChangeHandler.bind(this));
     }
 
+    private removeEventListeners(): void {
+        this.scene.events.on("moveSelected", () => { });
+        this.scene.events.on("actionSelected", () => { });
+        this.scene.events.on("waitSelected", () => { });
+        this.scene.events.on("tileClick", () => { });
+        this.scene.events.on("unitTurnEnd", () => { });
+        this.scene.events.on("turnChange", () => { });
+    }
+
     /* 
      * @params
      * eventData: { unit?: Unit, position?: Phaser.Math.Vector2, tile?: Tile  }
@@ -41,14 +53,16 @@ class UnitManager {
         const gridSystem = this.scene.getGridSystem();
         if (!gridSystem) return;
 
-        const tilesInRange = gridSystem.getTilesInRange(eventData.unit, eventData.unit.getCurrentTile(), eventData.unit.stats.movement);
+        if (eventData.unit) {
+            const tilesInRange = gridSystem.getTilesInRange(eventData.unit, eventData.unit.getCurrentTile(), eventData.unit.stats.movement);
 
-        tilesInRange.forEach((tile) => {
-            tile.highlight();
-            this.highlightedTiles?.push(tile);
-        })
+            tilesInRange.forEach((tile) => {
+                tile.highlight();
+                this.highlightedTiles?.push(tile);
+            })
 
-        this.mode = "movement"
+            this.mode = "movement"
+        }
     }
 
     private clearSelection(): void {
@@ -69,7 +83,7 @@ class UnitManager {
         const gridSystem = this.scene.getGridSystem();
         if (!gridSystem) return;
 
-        const tilesInRange = gridSystem.getTilesInRange(eventData.unit, eventData.unit.getCurrentTile(), eventData.unit.stats.range, false);
+        const tilesInRange = gridSystem.getTilesInRange(eventData.unit!, eventData.unit!.getCurrentTile(), eventData.unit!.stats.range, false);
         let rangeColor: number;
 
         // Change color based on unit action
@@ -95,8 +109,7 @@ class UnitManager {
     }
 
     private handleTileClick(eventData: EventData): void {
-        // Test to see if there's a unit selected
-        // Test to see if there's a action selected
+        if (this.scene.mode === GameModes.DEPLOYMENT) return;
 
         if (this.mode === "action" && this.highlightedTiles?.includes(eventData.tile!) && this.selectedUnit) {
             // THIS WILL RUN THE ACTION ON THE TILE SELECTED
@@ -149,34 +162,32 @@ class UnitManager {
         let isRoundOver = true;
 
         this.units.forEach((unit) => {
-            if(!unit.getIsTurnOver() && unit.isPlayerOwner) {
+            if (!unit.getIsTurnOver() && unit.isPlayerOwner) {
                 isRoundOver = false;
             }
         })
 
-        if(isRoundOver) {
+        if (isRoundOver) {
             this.scene.events.emit("playerTurnEnd");
         }
     }
 
     private turnChangeHandler(turnData: any): void {
-        console.log("This is running", turnData.isPlayerTurn);
         this.resetAllUnitTurns(turnData.isPlayerTurn);
     }
 
     private resetAllUnitTurns(isPlayer: boolean): void {
-        console.log("Resetting units");
-        if(isPlayer) {
+        if (isPlayer) {
             this.units.forEach((unit) => {
-                if(unit.isPlayerOwner) {
+                if (unit.isPlayerOwner) {
                     unit.resetTurn();
                 }
             })
         }
 
-        if(!isPlayer) {
+        if (!isPlayer) {
             this.units.forEach((unit) => {
-                if(!unit.isPlayerOwner) {
+                if (!unit.isPlayerOwner) {
                     unit.resetTurn();
                 }
             })
@@ -185,6 +196,14 @@ class UnitManager {
 
     public getAllUnits(): Unit[] {
         return this.units;
+    }
+
+    public disableUnitInteractions(): void {
+        this.removeEventListeners();
+    }
+
+    public enableUnitInteractions(): void {
+        this.setupEventListeners();
     }
 }
 

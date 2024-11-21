@@ -1,9 +1,11 @@
 import { Scene } from "phaser";
 import EventData from "../types/EventData";
 import Unit from "../entities/units/Unit";
+import GameModes from "../entities/utils/GameModes";
+import GameScene from "../scenes/GameScene";
 
 class UnitActionMenu {
-    private scene: Scene
+    private scene: GameScene;
     private menu: Phaser.GameObjects.Container;
     private menuButtons: Phaser.GameObjects.Container[] = [];
     private position: Phaser.Math.Vector2;
@@ -14,7 +16,7 @@ class UnitActionMenu {
     ]
     private unit?: Unit;
 
-    constructor(scene: Scene) {
+    constructor(scene: GameScene) {
         this.scene = scene;
         this.createMenu();
         this.setupEventListeners();
@@ -97,6 +99,8 @@ class UnitActionMenu {
     }
 
     private handleClick(eventData: EventData): void {
+        if(this.scene.mode === GameModes.DEPLOYMENT) return;
+
         if (eventData.unit && eventData.unit.isPlayerOwner) {
             this.unit = eventData.unit;
             this.position = eventData.position!;

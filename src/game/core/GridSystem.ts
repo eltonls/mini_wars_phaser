@@ -8,24 +8,35 @@ class GridSystem {
     private scene: GameScene;
     private width: number;
     private height: number;
+    private tilemapData: any;
 
-    constructor(scene: GameScene, width: number, height: number) {
+    constructor(scene: GameScene, width: number, height: number, tilemapData: any) {
         this.scene = scene;
-        this.width = width;
-        this.height = height;
+        this.width = tilemapData.width;
+        this.height = tilemapData.height;
+        this.tilemapData = tilemapData;
         this.grid = this.createGrid();
     }
 
     private createGrid(): Tile[][] {
         const grid: Tile[][] = [];
+        const layer = this.tilemapData.layers[0];
+        const tileData = layer.data;
 
-        for (let i = 0; i < this.width; i++) {
-            grid[i] = [];
+        // Decode base64 data
+        const decodedTileData = atob(tileData);
+        const tilesetData = this.tilemapData.tilesets[0];
 
-            for (let j = 0; j < this.height; j++) {
-                const terrain = this.generateTerrain(i, j);
-                const tile = new Tile(this.scene, i, j, terrain);
-                grid[i][j] = tile;
+        for (let y = 0; y < this.height; y++) {
+            grid[y] = [];
+
+            for (let x = 0; x < this.width; x++) {
+                const index = (y * this.width + x) * 4; // 4 bytes per tile in base64 decoded data
+                const tileId = this.readInt32LE(decodedTileData.slice(index, index + 4)) - tilesetData.firstgid;
+
+                const terrainInfo = this.mapTileIdToTerrainType(tileId, tilesetData);
+                const tile = new Tile(this.scene, x, y, terrainInfo.terrainType, terrainInfo.spriteKey ? terrainInfo.spriteKey.slice(0, -4) : TerrainType.PLAINS);
+                grid[y][x] = tile;
             }
         }
 
@@ -34,6 +45,58 @@ class GridSystem {
 
     private generateTerrain(x: number, y: number): TerrainType {
         return TerrainType.PLAINS;
+    }
+
+    private readInt32LE(str: string): number {
+        return (str.charCodeAt(0)) |
+            (str.charCodeAt(1) << 8) |
+            (str.charCodeAt(2) << 16) |
+            (str.charCodeAt(3) << 24);
+    }
+
+    private mapTileIdToTerrainType(tileId: number, tilesetData: any): { terrainType: TerrainType, spriteKey?: string } {
+        // Default to plains if no specific mapping is found
+        const defaultTerrain = TerrainType.PLAINS;
+
+        // Find the tile in the tileset
+        const tileInfo = tilesetData.tiles.find((tile: any) => tile.id === tileId);
+
+        if (!tileInfo) return defaultTerrain;
+
+        // More comprehensive mapping of image filenames to terrain types
+        const terrainMappings: { [key: string]: TerrainType } = {
+            'terrain_forest.png': TerrainType.FOREST,
+            'terrain_plains.png': TerrainType.PLAINS,
+            'terrain_lava.png': TerrainType.MOUNTAINS,  // Mapped to mountains based on PrototypeOne's preload
+            'terrain_water.png': TerrainType.WATER,
+            'terrain_water_corner_left_top.png': TerrainType.WATER,
+            'terrain_water_corner_right_top.png': TerrainType.WATER,
+            'terrain_water_corner_top.png': TerrainType.WATER,
+            'terrain_water_edge_bottom.png': TerrainType.WATER,
+            'terrain_water_corner_left_bottom.png': TerrainType.WATER,
+            'terrain_water_corner_right_bottom.png': TerrainType.WATER,
+            'terrain_water_edge_top.png': TerrainType.WATER,
+            'terrain_water_edge_left.png': TerrainType.WATER,
+            'terrain_water_edge_right.png': TerrainType.WATER,
+            'terrain_plains_corner_left.png': TerrainType.PLAINS,
+            'terrain_plains_corner_right.png': TerrainType.PLAINS,
+            'terrain_plains_corner_top.png': TerrainType.PLAINS,
+            'terrain_plains_edge_bottom.png': TerrainType.PLAINS,
+            'terrain_plains_edge_left.png': TerrainType.PLAINS,
+            'terrain_plains_edge_right.png': TerrainType.PLAINS,
+            'terrain_plains_edge_top.png': TerrainType.PLAINS,
+            'terrain_lava_corner_left.png': TerrainType.MOUNTAINS,
+            'terrain_lava_corner_right.png': TerrainType.MOUNTAINS,
+            'terrain_lava_corner_top.png': TerrainType.MOUNTAINS,
+            'terrain_lava_edge_bottom.png': TerrainType.MOUNTAINS,
+            'terrain_lava_edge_left.png': TerrainType.MOUNTAINS,
+            'terrain_lava_edge_right.png': TerrainType.MOUNTAINS,
+            'terrain_lava_edge_top.png': TerrainType.MOUNTAINS
+        };
+
+        // Extract filename from the full path
+        const filename = tileInfo.image.split('/').pop();
+        return { terrainType: terrainMappings[filename] || defaultTerrain, spriteKey: filename };
     }
 
     /*
@@ -62,13 +125,13 @@ class GridSystem {
 
             for (let x = 0; x < range; x++) {
                 const tile: Tile | undefined = this.getTile(actualCoordinates.x, actualCoordinates.y);
-                if(!tile) break;
+                if (!tile) break;
 
                 if (!tile.getOccupyingUnit()) {
                     tiles.push(tile);
                 }
 
-                if(isMovement) 
+                if (isMovement)
                     x += tile.getMovementCost(unit.getUnitType());
 
                 actualCoordinates = new Phaser.Math.Vector2(actualCoordinates.x + direction[0], actualCoordinates.y + direction[1]);
@@ -202,7 +265,7 @@ class GridSystem {
     }
 
     public getTile(x: number, y: number): Tile | undefined {
-        if(!this.grid[x]) return undefined;
+        if (!this.grid[x]) return undefined;
         return this.grid[x][y];
     }
 }

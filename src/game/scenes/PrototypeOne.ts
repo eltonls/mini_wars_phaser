@@ -10,11 +10,13 @@ import UnitManager from "../managers/UnitManager";
 import UnitStats from "../types/UnitStats";
 import UnitTypes from "../types/UnitTypes";
 import UnitActionMenu from "../ui/UnitActionMenu";
+import { loadTileMap, miniMapData, createPhaseUnits } from "../maps/phase_one.ts";
 import GameScene from "./GameScene";
 
 class PrototypeOne extends GameScene {
     private listOfPlayerUnits: Unit[];
     private listOfEnemyUnits: Unit[];
+    private tilemapData: TiledMapData;
 
     constructor() {
         super();
@@ -22,13 +24,43 @@ class PrototypeOne extends GameScene {
 
     preload() {
         this.load.setPath("assets");
+        this.tilemapData = miniMapData;
 
         // Tiles
-        this.load.image("terrain_plains", "Tiles/plains_terrain.png");
-        this.load.image("terrain_forest", "Tiles/forest_terrain.png");
-        this.load.image("terrain_mountain", "Tiles/lava_terrain.png");
-        this.load.image("terrain_water", "Tiles/water_terrain.png");
-
+        this.load.image("terrain_plains", "Tiles/terrain_plains.png");
+        this.load.image("terrain_forest", "Tiles/terrain_forest.png");
+        this.load.image("terrain_mountain", "Tiles/terrain_lava.png");
+        this.load.image("terrain_water", "Tiles/terrain_water.png");
+        
+        this.load.image("terrain_water_corner_left_top", "Tiles/terrain_water_corner_left_top.png");
+        this.load.image("terrain_water_corner_right_top", "Tiles/terrain_water_corner_right_top.png");
+        this.load.image("terrain_water_corner_top", "Tiles/terrain_water_edge_top.png");
+        this.load.image("terrain_water_edge_bottom", "Tiles/terrain_water_edge_bottom.png");
+        this.load.image("terrain_water_corner_left_bottom", "Tiles/terrain_water_corner_left_bottom.png");
+        this.load.image("terrain_water_corner_right_bottom", "Tiles/terrain_water_corner_right_bottom.png");
+        this.load.image("terrain_water_edge_top", "Tiles/terrain_water_edge_top.png");
+        this.load.image("terrain_water_edge_left", "Tiles/terrain_water_edge_left.png");
+        this.load.image("terrain_water_edge_right", "Tiles/terrain_water_edge_right.png");
+        
+        this.load.image("terrain_plains_corner_left_top", "Tiles/terrain_plains_corner_left_top.png");
+        this.load.image("terrain_plains_corner_right_top", "Tiles/terrain_plains_corner_right_top.png");
+        this.load.image("terrain_plains_corner_right_bottom", "Tiles/terrain_plains_corner_right_bottom.png");
+        this.load.image("terrain_plains_corner_left_bottom", "Tiles/terrain_plains_corner_left_bottom.png");
+        this.load.image("terrain_plains_corner_top", "Tiles/terrain_plains_edge_top.png");
+        this.load.image("terrain_plains_edge_bottom", "Tiles/terrain_plains_edge_bottom.png");    
+        this.load.image("terrain_plains_edge_left", "Tiles/terrain_plains_edge_left.png");
+        this.load.image("terrain_plains_edge_right", "Tiles/terrain_plains_edge_right.png");
+        this.load.image("terrain_plains_edge_top", "Tiles/terrain_plains_edge_top.png");
+        this.load.image("terrain_lava_corner_left_top", "Tiles/terrain_lava_corner_left_top.png");
+        this.load.image("terrain_lava_corner_right_top", "Tiles/terrain_lava_corner_right_top.png");
+        this.load.image("terrain_lava_corner_top", "Tiles/terrain_lava_edge_top.png");
+        this.load.image("terrain_lava_edge_bottom", "Tiles/terrain_lava_edge_bottom.png");
+        this.load.image("terrain_lava_corner_left_bottom", "Tiles/terrain_lava_corner_left_bottom.png");
+        this.load.image("terrain_lava_corner_right_bottom", "Tiles/terrain_lava_corner_right_bottom.png");
+        this.load.image("terrain_lava_edge_top", "Tiles/terrain_lava_edge_top.png");
+        this.load.image("terrain_lava_edge_left", "Tiles/terrain_lava_edge_left.png");
+        this.load.image("terrain_lava_edge_right", "Tiles/terrain_lava_edge_right.png");
+        
         // Sprites for Units
         this.load.spritesheet("mage", "Units/Elf Enchanter/ElfEnchanterIdleSide.png", { frameWidth: 16, frameHeight: 16 });
         this.load.spritesheet("knight", "Units/Elf Lord/ElfLordIdleSide.png", { frameWidth: 16, frameHeight: 16 });
@@ -37,16 +69,22 @@ class PrototypeOne extends GameScene {
         this.load.image("button", "UI/Button.png");
         this.load.image("unitInfo", "UI/unit_info.png");
         this.load.image("menuBG", "UI/menu_bg.png");
+        this.load.image("deploymentBook", "UI/Ui_base.png");
+        this.load.image("dialogBox", "UI/dialogue_box.png");
     }
 
     create() {
         this.gridSize = 30;
-        this.gridSystem = new GridSystem(this, 39, 21);
+        this.gridSystem = new GridSystem(this, 39, 23, this.tilemapData);
         this.unitsManager = new UnitManager(this);
         this.unitActionMenu = new UnitActionMenu(this);
         this.turnManager = new TurnManager(this);
         this.aiSystem = new AISystem(this);
         this.uiManager = new UIManager(this);
+        this.startDeploymentPhase();
+        this.initializeDeploymentPool(createPhaseUnits(this));
+        this.createDeploymentUI();
+
 
         this.startUnits();
 
@@ -54,39 +92,6 @@ class PrototypeOne extends GameScene {
     }
 
     private startUnits(): void {
-        const mageUnitStats = new UnitStats(
-            20,
-            20,
-            3,
-            2,
-            3,
-            4,
-            4,
-            10,
-            "mage"
-        )
-
-        const knightUnitStats = new UnitStats(
-            30,
-            30,
-            3,
-            2,
-            3,
-            4,
-            4,
-            6,
-            "knight"
-        )
-
-        for (let i = 0; i < 10; i++) {
-            if(i < 5) {
-                const newKnight = new Knight(this, this.gridSystem.getTile(5, 5 + i)!, false, knightUnitStats, UnitTypes.KNIGHT, "knight");
-                this.aiSystem.addUnit(newKnight, newKnight.getCurrentTile());
-            } else {
-                const newMage = new Mage(this, this.gridSystem.getTile(6, 5 + i)!, false, mageUnitStats, UnitTypes.MAGE, "mage");
-                this.aiSystem.addUnit(newMage, newMage.getCurrentTile());
-            }
-        }
     }
 }
 

@@ -7,7 +7,7 @@ import Tile from "../Tile";
 abstract class Unit extends Phaser.GameObjects.Sprite {
     public stats: UnitStats;
     public isPlayerOwner: boolean;
-    protected currentTile: Tile;
+    protected currentTile?: Tile;
     protected unitType: UnitTypes;
     protected path: Tile[] = [];
     protected hasMovedThisTurn: boolean;
@@ -16,8 +16,9 @@ abstract class Unit extends Phaser.GameObjects.Sprite {
     public scene: GameScene;
     private selectionIndicator?: Phaser.GameObjects.Rectangle;
 
-    constructor(scene: GameScene, tile: Tile, isPlayerOwner: boolean, stats: UnitStats, unitType: UnitTypes, spriteKey: string) {
-        super(scene, tile.x, tile.y, spriteKey)
+    constructor(scene: GameScene, tile: Tile | undefined, isPlayerOwner: boolean, stats: UnitStats, unitType: UnitTypes, spriteKey: string) {
+        super(scene, tile ? tile.x : Infinity, tile ? tile.y : Infinity, spriteKey);
+
         this.scene = scene;
 
         this.unitType = unitType;
@@ -32,7 +33,7 @@ abstract class Unit extends Phaser.GameObjects.Sprite {
         this.setInteractive();
 
         this.setOrigin(0.5);
-        this.setScale(2);
+        this.setScale(1.5);
 
         this.scene.add.existing(this);
         this.setupEventListeners();
@@ -58,7 +59,6 @@ abstract class Unit extends Phaser.GameObjects.Sprite {
     }
 
     private onHoverEnd(): void {
-        console.log("HOVER END");
         const eventData: EventData = {
             position: this.currentTile.getPosition(),
             terrain: this.currentTile.getTerrain(),
@@ -88,6 +88,10 @@ abstract class Unit extends Phaser.GameObjects.Sprite {
 
     public getCurrentTile(): Tile {
         return this.currentTile;
+    }
+
+    public setCurrentTile(tile: Tile): void {
+        this.currentTile = tile;
     }
 
     public setPath(path: Tile[]): void {
@@ -144,14 +148,14 @@ abstract class Unit extends Phaser.GameObjects.Sprite {
 
     private onClick(): void {
         const eventData: EventData = {
-            position: this.currentTile.getPositionVec(),
-            terrain: this.currentTile.getTerrain(),
+            position: this.currentTile!.getPositionVec(),
+            terrain: this.currentTile!.getTerrain(),
             unit: this,
             tile: this.getCurrentTile()
         };
 
-        if(this.hasActedThisTurn && this.hasMovedThisTurn) {
-        } else { 
+        if (this.hasActedThisTurn && this.hasMovedThisTurn) {
+        } else {
             this.scene.events.emit("tileClick", eventData);
         }
     }
@@ -181,7 +185,7 @@ abstract class Unit extends Phaser.GameObjects.Sprite {
         this.hasMovedThisTurn = false;
         this.isTurnOver = false;
         setTimeout(() => {
-            this.setAlpha(1); 
+            this.setAlpha(1);
         }, 500);
     }
 

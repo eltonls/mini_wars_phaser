@@ -31,7 +31,6 @@ class AISystem {
     }
 
     public async startAITurn(): Promise<void> {
-        console.log("Starting ai turn");
         for (const unit of this.aiUnits) {
             if (unit.getIsTurnOver()) continue;
             

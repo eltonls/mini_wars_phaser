@@ -11,15 +11,18 @@ class Tile extends Phaser.GameObjects.Container {
     private properties: TerrainProperties;
     private positionVec: Phaser.Math.Vector2; // Position on Grid
     private sprite: Phaser.GameObjects.Sprite;
+    private spriteKey: string;
     private highlighted: boolean = false;
     private highlightRect?: Phaser.GameObjects.Rectangle;
     private occupyingUnit?: Unit;
+    private waterTween?: Phaser.Tweens.Tween;
 
     constructor(
         scene: Scene,
         x: number,
         y: number,
-        terrain: TerrainType = TerrainType.PLAINS
+        terrain: TerrainType = TerrainType.PLAINS,
+        spriteKey: string
     ) {
         super(scene, (x + 1) * 32, (y + 1) * 32);
 
@@ -27,6 +30,7 @@ class Tile extends Phaser.GameObjects.Container {
         this.positionVec = new Phaser.Math.Vector2(x, y);
 
         this.terrain = terrain;
+        this.spriteKey = spriteKey;
         this.properties = this.getTerrainProperties(terrain);
 
         this.initializeVisuals();
@@ -65,11 +69,37 @@ class Tile extends Phaser.GameObjects.Container {
         return terrainProps[terrain];
     }
 
+    private startWaterAnimation(): void {
+        // Create a subtle wave-like movement
+        this.waterTween = this.scene.tweens.add({
+            targets: this.sprite,
+            duration: 2000, // 2 seconds for a full cycle
+            repeat: -1, // Infinite repeat
+            yoyo: true, // Reverse the animation back and forth
+            props: {
+                x: {
+                    from: 0,
+                    to: 2,
+                    ease: 'Sine.easeInOut'
+                },
+                y: {
+                    from: 0,
+                    to: 5, // Small vertical movement
+                    ease: 'Sine.easeInOut' // Smooth sine wave movement
+                }
+            }
+        });
+    }
+
     private initializeVisuals(): void {
-        this.sprite = this.scene.add.sprite(0, 0, `terrain_${this.terrain}`);
+        this.sprite = this.scene.add.sprite(0, 0, this.spriteKey);
         this.add(this.sprite);
-        this.sprite.setScale(2);
+        this.sprite.setScale(1);
         this.scene.add.existing(this);
+
+        if (this.terrain === TerrainType.WATER) {
+            this.startWaterAnimation();
+        }
     }
 
     private setupInteractive(): void {
@@ -86,8 +116,6 @@ class Tile extends Phaser.GameObjects.Container {
             unit: this.occupyingUnit,
             tile: this
         }
-
-        console.log("Tile Posiiton: ", this.getPositionVec());
 
         this.scene.events.emit("tileClick", eventData);
     }
@@ -168,6 +196,10 @@ class Tile extends Phaser.GameObjects.Container {
         this.terrain = newType;
         this.properties = this.getTerrainProperties(newType);
         this.sprite.setTexture(`terrain_${newType}`); 
+
+        if (newType === TerrainType.WATER) {
+            this.startWaterAnimation();
+        }
     }
 
     public setOccupyingUnit(unit?: Unit): void {
@@ -180,6 +212,10 @@ class Tile extends Phaser.GameObjects.Container {
 
     public getPositionVec(): Phaser.Math.Vector2 {
         return this.positionVec;
+    }
+
+    public getSprite(): Phaser.GameObjects.Sprite {
+        return this.sprite;
     }
 
     public getTerrain(): TerrainType {
