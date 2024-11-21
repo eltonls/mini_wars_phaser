@@ -10,8 +10,9 @@ import UnitManager from "../managers/UnitManager";
 import UnitStats from "../types/UnitStats";
 import UnitTypes from "../types/UnitTypes";
 import UnitActionMenu from "../ui/UnitActionMenu";
-import { loadTileMap, miniMapData, createPhaseUnits } from "../maps/phase_one.ts";
+import { loadTileMap, miniMapData, createPhaseUnits, enemyUnits } from "../maps/phase_one.ts";
 import GameScene from "./GameScene";
+import { KnightStats } from "../entities/units/UnitStatsBase.ts";
 
 class PrototypeOne extends GameScene {
     private listOfPlayerUnits: Unit[];
@@ -31,7 +32,7 @@ class PrototypeOne extends GameScene {
         this.load.image("terrain_forest", "Tiles/terrain_forest.png");
         this.load.image("terrain_mountain", "Tiles/terrain_lava.png");
         this.load.image("terrain_water", "Tiles/terrain_water.png");
-        
+
         this.load.image("terrain_water_corner_left_top", "Tiles/terrain_water_corner_left_top.png");
         this.load.image("terrain_water_corner_right_top", "Tiles/terrain_water_corner_right_top.png");
         this.load.image("terrain_water_corner_top", "Tiles/terrain_water_edge_top.png");
@@ -41,13 +42,13 @@ class PrototypeOne extends GameScene {
         this.load.image("terrain_water_edge_top", "Tiles/terrain_water_edge_top.png");
         this.load.image("terrain_water_edge_left", "Tiles/terrain_water_edge_left.png");
         this.load.image("terrain_water_edge_right", "Tiles/terrain_water_edge_right.png");
-        
+
         this.load.image("terrain_plains_corner_left_top", "Tiles/terrain_plains_corner_left_top.png");
         this.load.image("terrain_plains_corner_right_top", "Tiles/terrain_plains_corner_right_top.png");
         this.load.image("terrain_plains_corner_right_bottom", "Tiles/terrain_plains_corner_right_bottom.png");
         this.load.image("terrain_plains_corner_left_bottom", "Tiles/terrain_plains_corner_left_bottom.png");
         this.load.image("terrain_plains_corner_top", "Tiles/terrain_plains_edge_top.png");
-        this.load.image("terrain_plains_edge_bottom", "Tiles/terrain_plains_edge_bottom.png");    
+        this.load.image("terrain_plains_edge_bottom", "Tiles/terrain_plains_edge_bottom.png");
         this.load.image("terrain_plains_edge_left", "Tiles/terrain_plains_edge_left.png");
         this.load.image("terrain_plains_edge_right", "Tiles/terrain_plains_edge_right.png");
         this.load.image("terrain_plains_edge_top", "Tiles/terrain_plains_edge_top.png");
@@ -60,7 +61,7 @@ class PrototypeOne extends GameScene {
         this.load.image("terrain_lava_edge_top", "Tiles/terrain_lava_edge_top.png");
         this.load.image("terrain_lava_edge_left", "Tiles/terrain_lava_edge_left.png");
         this.load.image("terrain_lava_edge_right", "Tiles/terrain_lava_edge_right.png");
-        
+
         // Sprites for Units
         this.load.spritesheet("mage", "Units/Elf Enchanter/ElfEnchanterIdleSide.png", { frameWidth: 16, frameHeight: 16 });
         this.load.spritesheet("knight", "Units/Elf Lord/ElfLordIdleSide.png", { frameWidth: 16, frameHeight: 16 });
@@ -81,6 +82,7 @@ class PrototypeOne extends GameScene {
         this.turnManager = new TurnManager(this);
         this.aiSystem = new AISystem(this);
         this.uiManager = new UIManager(this);
+        this.createEnemyUnits();
         this.startDeploymentPhase();
         this.initializeDeploymentPool(createPhaseUnits(this));
         this.createDeploymentUI();
@@ -89,6 +91,23 @@ class PrototypeOne extends GameScene {
         this.startUnits();
 
         EventBus.emit("current-scene-ready", this);
+    }
+
+    private createEnemyUnits(): void {
+        enemyUnits.forEach((unit: string, index: number) => {
+            if(unit === "Knight") {
+                const newKnight = new Knight(
+                    this, 
+                    this.gridSystem.getTile(12 + 1 * index, 10),
+                    false,
+                    KnightStats,
+                    UnitTypes.KNIGHT,
+                    "knight"
+                )
+
+                this.aiSystem.addUnit(newKnight, newKnight.getCurrentTile());
+            }
+        })
     }
 
     private startUnits(): void {

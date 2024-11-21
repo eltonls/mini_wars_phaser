@@ -23,6 +23,8 @@ abstract class GameScene extends Scene {
     protected uiManager: UIManager;
     public mode: GameModes;
     protected deploymentUnits: Unit[];
+    protected deploymentUI: Phaser.GameObjects.Container;
+    protected confirmDialogUI: Phaser.GameObjects.Container;
     protected selectedUnit?: Unit;
 
     constructor() {
@@ -50,10 +52,6 @@ abstract class GameScene extends Scene {
         // Highlight deployment zones
         deploymentZones.forEach(tile => {
             tile.highlight(0x00FF00)
-
-            let graphics = this.add.graphics();
-            graphics.lineStyle(1, 0xffffff, 1);
-            graphics.strokeRectShape(tile.getSprite().getBounds());
         }); // Green highlight
 
         // Enable unit placement mode
@@ -68,7 +66,7 @@ abstract class GameScene extends Scene {
         const deploymentZones: Tile[] = [];
 
         // Example: First two rows for player deployment
-        for (let x = 10; x < 14; x++) {
+        for (let x = 15; x < 17; x++) {
             for (let y = 13; y < 15; y++) {
                 const tile = gridSystem.getTile(x, y);
                 if (tile && !tile.getOccupyingUnit()) {
@@ -131,17 +129,27 @@ abstract class GameScene extends Scene {
             deploymentUIContainer.add(unitIcon);
         });
 
+        this.deploymentUI = deploymentUIContainer;
+        this.confirmDialogUI = confirmDialogContainer;
         this.add.existing(deploymentUIContainer);
         this.add.existing(confirmDialogContainer);
     }
 
     protected endDeploymentPhase(): void {
         // Clear deployment zone highlights
-        this.getDeploymentZones().forEach(tile => tile.clearHighlight());
+        this.getDeploymentZones().forEach(tile => { 
+            tile.clearHighlight() 
+        });
+
+        // Clear menus
+        this.deploymentUI.destroy();
+        this.confirmDialogUI.destroy();
 
         // Enable normal game interactions
         this.mode = GameModes.NORMAL;
         this.unitsManager.enableUnitInteractions();
+
+        //
 
         // Start first turn
         this.turnManager.startPlayerTurn();

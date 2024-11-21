@@ -27,16 +27,16 @@ class GridSystem {
         const decodedTileData = atob(tileData);
         const tilesetData = this.tilemapData.tilesets[0];
 
-        for (let y = 0; y < this.height; y++) {
-            grid[y] = [];
+        for (let x = 0; x < this.width; x++) {
+            grid[x] = [];
 
-            for (let x = 0; x < this.width; x++) {
+            for (let y = 0; y < this.height; y++) {
                 const index = (y * this.width + x) * 4; // 4 bytes per tile in base64 decoded data
                 const tileId = this.readInt32LE(decodedTileData.slice(index, index + 4)) - tilesetData.firstgid;
 
                 const terrainInfo = this.mapTileIdToTerrainType(tileId, tilesetData);
                 const tile = new Tile(this.scene, x, y, terrainInfo.terrainType, terrainInfo.spriteKey ? terrainInfo.spriteKey.slice(0, -4) : TerrainType.PLAINS);
-                grid[y][x] = tile;
+                grid[x][y] = tile;
             }
         }
 
@@ -127,9 +127,7 @@ class GridSystem {
                 const tile: Tile | undefined = this.getTile(actualCoordinates.x, actualCoordinates.y);
                 if (!tile) break;
 
-                if (!tile.getOccupyingUnit()) {
-                    tiles.push(tile);
-                }
+                tiles.push(tile);
 
                 if (isMovement)
                     x += tile.getMovementCost(unit.getUnitType());
@@ -137,6 +135,8 @@ class GridSystem {
                 actualCoordinates = new Phaser.Math.Vector2(actualCoordinates.x + direction[0], actualCoordinates.y + direction[1]);
             }
         })
+
+        console.log(tiles);
 
         return tiles;
     }

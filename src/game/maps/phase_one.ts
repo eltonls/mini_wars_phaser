@@ -267,7 +267,12 @@ export function createPhaseUnits(scene: GameScene): Unit[] {
     return units;
 }
 
-
+export const enemyUnits = [
+    "Knight",
+    "Knight",
+    "Knight",
+    "Knight",
+]
 
 // Load the tilemap
 loadTileMap("mini", miniMapData);
