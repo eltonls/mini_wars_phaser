@@ -126,8 +126,14 @@ class GridSystem {
             for (let x = 0; x < range; x++) {
                 const tile: Tile | undefined = this.getTile(actualCoordinates.x, actualCoordinates.y);
                 if (!tile) break;
-
-                tiles.push(tile);
+                
+                if(!tile.getOccupyingUnit() && isMovement) {
+                    tiles.push(tile);
+                }
+                
+                if(!isMovement) {
+                    tiles.push(tile);
+                }
 
                 if (isMovement)
                     x += tile.getMovementCost(unit.getUnitType());
@@ -135,9 +141,7 @@ class GridSystem {
                 actualCoordinates = new Phaser.Math.Vector2(actualCoordinates.x + direction[0], actualCoordinates.y + direction[1]);
             }
         })
-
-        console.log(tiles);
-
+        
         return tiles;
     }
 

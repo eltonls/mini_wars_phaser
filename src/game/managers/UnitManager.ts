@@ -105,7 +105,10 @@ class UnitManager {
     }
 
     private waitUnit(eventData: EventData): void {
-
+        if (eventData.unit) {
+            eventData.unit.endTurn();
+            this.checkIfTurnIsOver();
+        }
     }
 
     private handleTileClick(eventData: EventData): void {

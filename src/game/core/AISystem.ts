@@ -33,10 +33,13 @@ class AISystem {
     public async startAITurn(): Promise<void> {
         for (const unit of this.aiUnits) {
             if (unit.getIsTurnOver()) continue;
-            
-            await this.executeUnitTurn(unit);
-            // Add delay between unit moves for better visualization
-            await new Promise(resolve => setTimeout(resolve, 500));
+
+            try {
+                await this.executeUnitTurn(unit);
+                await new Promise(resolve => setTimeout(resolve, 500));
+            } catch (error) {
+                console.error(`Error executing turn for unit ${unit.id}:`, error);
+            }
         }
         this.scene.events.emit("aiTurnEnd", true);
     }
@@ -44,7 +47,7 @@ class AISystem {
     private async executeUnitTurn(unit: Unit): Promise<void> {
         const bestMove = this.findBestMove(unit);
         if (!bestMove) return;
-
+        
         // Execute movement
         if (bestMove.destinationTile !== unit.getCurrentTile()) {
             const path = this.scene.getGridSystem().findPath(
@@ -53,15 +56,12 @@ class AISystem {
                 unit
             );
             unit.setPath(path);
-            await new Promise(resolve => {
-                unit.moveAlongPath();
-                this.scene.time.delayedCall(path.length * 200 + 100, resolve);
-            });
+            unit.moveAlongPath();
         }
 
         // Execute action if there's a target
         if (bestMove.targetTile) {
-            unit.performAction([bestMove.targetTile], []);
+            unit.performAction(bestMove.targetTile);
         }
     }
 
@@ -74,11 +74,9 @@ class AISystem {
             unit.getMovementRange()
         );
 
-        // Add current position to possible movement tiles
         movementTiles.push(currentTile);
 
         for (const moveTile of movementTiles) {
-            // Get possible action tiles from this position
             const actionTiles = this.scene.getGridSystem().getTilesInRange(
                 unit,
                 moveTile,
@@ -86,25 +84,27 @@ class AISystem {
                 false
             );
 
-            // Score this position and possible actions
             const move = this.evaluateMove(unit, moveTile, actionTiles);
-            possibleMoves.push(move);
+            if (move.score > -Infinity) {
+                possibleMoves.push(move);
+            }
         }
 
-        // Return the move with the highest score
-        return possibleMoves.reduce((best, current) => 
+        if (possibleMoves.length === 0) {
+            return null;
+        }
+
+        return possibleMoves.reduce((best, current) =>
             current.score > best.score ? current : best
-        );
+        )    
     }
 
     private evaluateMove(unit: Unit, moveTile: Tile, actionTiles: Tile[]): Move {
         let bestScore = -Infinity;
         let bestTarget: Tile | undefined;
 
-        // Base position score
         let positionScore = this.evaluatePosition(unit, moveTile);
 
-        // Evaluate each possible action from this position
         for (const targetTile of actionTiles) {
             const actionScore = this.evaluateAction(unit, targetTile);
             if (actionScore > bestScore) {
@@ -124,61 +124,34 @@ class AISystem {
     private evaluatePosition(unit: Unit, tile: Tile): number {
         let score = 0;
 
-        // Terrain advantages
         score += this.getTerrainScore(unit, tile);
-
-        // Distance to nearest enemy
-        const distanceScore = this.getDistanceScore(unit, tile);
-        score += distanceScore;
-
-        // Strategic positioning (e.g., controlling important areas)
+        score += this.getAttackScore(unit, tile);
         score += this.getStrategicScore(tile);
 
         return score;
+    }
+    
+    private getAttackScore(unit: Unit, tile: Tile): number {
+        const gridSystem = this.scene.getGridSystem();
+        const tilesInRange = gridSystem.getTilesInRange(unit, tile, unit.stats.range, false); 
+        
+        for (const targetTile of tilesInRange) {
+            const targetUnit = targetTile.getOccupyingUnit();
+            if (targetUnit && targetUnit.isPlayerOwner) {
+                return 999;
+            }
+        }
+        
+        return 0;
     }
 
     private getTerrainScore(unit: Unit, tile: Tile): number {
         const defenseBonus = tile.getDefenseBonus(unit.getUnitType());
         const movementCost = tile.getMovementCost(unit.getUnitType());
         
-        // Higher defense bonus is good, lower movement cost is good
         return (defenseBonus * 10) - (movementCost * 5);
     }
-
-    private getDistanceScore(unit: Unit, tile: Tile): number {
-        let score = 0;
-        const playerUnits = this.scene.getPlayerUnits();
-        
-        for (const playerUnit of playerUnits) {
-            const distance = this.getManhattanDistance(
-                tile.getPosition(),
-                playerUnit.getCurrentTile().getPosition()
-            );
-
-            // Score based on unit type and optimal engagement range
-            switch (unit.getUnitType()) {
-                case UnitTypes.MAGE:
-                    // Mages prefer medium range
-                    score += Math.abs(distance - 3) * -5;
-                    break;
-                case UnitTypes.KNIGHT:
-                    // Knights prefer close range
-                    score += distance * -10;
-                    break;
-                case UnitTypes.ROGUE:
-                    // Rogues prefer very close range
-                    score += distance * -15;
-                    break;
-                case UnitTypes.BLADEMASTER:
-                    // Blademasters prefer close to medium range
-                    score += Math.abs(distance - 2) * -8;
-                    break;
-            }
-        }
-
-        return score;
-    }
-
+    
     private getStrategicScore(tile: Tile): number {
         let score = 0;
 
@@ -186,16 +159,15 @@ class AISystem {
         const adjacentTiles = this.scene.getGridSystem().getNeighbors(tile);
         score += adjacentTiles.length * 5;
 
-        // Bonus for controlling certain terrain types
         switch (tile.getTerrain()) {
             case TerrainType.MOUNTAINS:
-                score += 15; // Good vantage point
+                score += 15; 
                 break;
             case TerrainType.FOREST:
-                score += 10; // Good cover
+                score += 10; 
                 break;
             case TerrainType.PLAINS:
-                score += 5; // Good mobility
+                score += 5;
                 break;
         }
 
@@ -208,13 +180,10 @@ class AISystem {
 
         let score = 0;
 
-        // Base damage potential
         score += unit.stats.attack * 10;
 
-        // Target's remaining health
         score += (100 - targetUnit.stats.health) * 5;
 
-        // Terrain advantages/disadvantages
         const terrainBonus = targetTile.getDefenseBonus(targetUnit.getUnitType());
         score -= terrainBonus * 8;
 

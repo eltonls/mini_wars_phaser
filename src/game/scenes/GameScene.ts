@@ -11,6 +11,7 @@ import Tile from "../entities/Tile";
 import Knight from "../entities/units/Knight";
 import Mage from "../entities/units/Mage";
 import GameModes from "../entities/utils/GameModes";
+import BattleSequenceManager from "../managers/BattleSequenceManager.ts";
 
 abstract class GameScene extends Scene {
     protected gridSize: number = 40;
@@ -21,6 +22,7 @@ abstract class GameScene extends Scene {
     protected unitActionMenu: UnitActionMenu;
     protected tilemap: Phaser.Tilemaps.MapData;
     protected uiManager: UIManager;
+    protected battleSequenceManager: BattleSequenceManager;
     public mode: GameModes;
     protected deploymentUnits: Unit[];
     protected deploymentUI: Phaser.GameObjects.Container;

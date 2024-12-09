@@ -7,6 +7,7 @@ import Unit from "../entities/units/Unit";
 import TurnManager from "../managers/TurnManager";
 import UIManager from "../managers/UIManager";
 import UnitManager from "../managers/UnitManager";
+import BattleSequenceManager from "../managers/BattleSequenceManager.ts";
 import UnitStats from "../types/UnitStats";
 import UnitTypes from "../types/UnitTypes";
 import UnitActionMenu from "../ui/UnitActionMenu";
@@ -82,6 +83,7 @@ class PrototypeOne extends GameScene {
         this.turnManager = new TurnManager(this);
         this.aiSystem = new AISystem(this);
         this.uiManager = new UIManager(this);
+        this.battleSequenceManager = new BattleSequenceManager(this);
         this.createEnemyUnits();
         this.startDeploymentPhase();
         this.initializeDeploymentPool(createPhaseUnits(this));
